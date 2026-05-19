@@ -13,6 +13,7 @@ import {
   FileText,
   ListChecks,
   Gavel,
+  Download,
 } from "lucide-react";
 import Link from "next/link";
 import { getMeeting } from "@/lib/db/queries";
@@ -324,7 +325,23 @@ export function ResultClient({ id }: Props) {
             {meeting.summary.title}
           </h1>
 
-          <CopyButton text={fullText} />
+          <div className="flex items-center gap-2">
+            <CopyButton text={fullText} />
+            <button
+              onClick={() => {
+                const blob = new Blob([fullText], { type: "text/markdown" });
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = `${meeting?.summary.title ?? "meeting"}.md`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass text-xs text-text-secondary hover:text-text-primary transition-all"
+            >
+              <Download className="size-3" />
+              Export
+            </button>
+          </div>
         </div>
       </header>
 

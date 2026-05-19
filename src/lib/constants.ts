@@ -10,7 +10,7 @@ export const APP_DESCRIPTION =
 // Recording limits
 export const MAX_RECORDING_DURATION_SECONDS = 60 * 60; // 1 hour cap
 export const RECORDING_MIME_TYPE = "audio/webm;codecs=opus";
-export const RECORDING_BITRATE = 128_000;
+export const RECORDING_BITRATE = 64_000; // 64 kbps opus — clear for speech, keeps files ~14 MB/30 min
 
 // AI models (Groq)
 export const TRANSCRIPTION_MODEL = "whisper-large-v3";

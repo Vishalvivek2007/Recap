@@ -1,3 +1,4 @@
+import React from "react";
 import { cn } from "@/lib/utils";
 
 export function GradientText({
@@ -7,11 +8,7 @@ export function GradientText({
 }: {
   children: React.ReactNode;
   className?: string;
-  as?: keyof React.JSX.IntrinsicElements;
+  as?: React.ElementType;
 }) {
-  return (
-    <Tag className={cn("text-gradient", className)}>
-      {children}
-    </Tag>
-  );
+  return React.createElement(Tag, { className: cn("text-gradient", className) }, children);
 }

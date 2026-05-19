@@ -24,9 +24,12 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: "Missing audio file" }, { status: 400 });
     }
 
-    const file = await toFile(audioEntry, "recording.webm", {
-      type: "audio/webm",
-    });
+    // Preserve original filename/type so Whisper knows the codec
+    const file = await toFile(
+      audioEntry,
+      audioEntry.name || "recording.webm",
+      { type: audioEntry.type || "audio/webm" }
+    );
 
     const raw = (await groq.audio.transcriptions.create({
       file,

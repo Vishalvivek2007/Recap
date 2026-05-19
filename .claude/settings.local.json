@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\visha\\\\projects\\\\notely\\\\node_modules\\\\next\\\\dist\\\\docs\\\\01-app\" -Recurse | Where-Object { $_.Name -match \"route|api|handler\" } | Select-Object FullName | Format-Table -Wrap)",
+      "PowerShell(New-Item *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}
