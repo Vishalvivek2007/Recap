@@ -131,7 +131,10 @@ export function AudioOrb({
           <ParticleField audioLevel={audioLevel} count={150} radius={2.2} />
         )}
 
-        <EffectComposer>
+        {/* multisampling=0: MSAA render targets don't support alpha channels,
+            causing an opaque rectangle in transparent canvases.
+            frameBufferType=HalfFloat: ensures FBOs preserve alpha properly. */}
+        <EffectComposer multisampling={0} frameBufferType={THREE.HalfFloatType}>
           <Bloom
             intensity={1.2}
             luminanceThreshold={0.15}

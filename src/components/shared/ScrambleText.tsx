@@ -85,10 +85,17 @@ export function ScrambleText({
   }, [mounted, inView, hasRun, autoStart, scramble, delay]);
 
   React.useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        // Page restored from bfcache — call scramble directly instead of relying
+        // on the state-cascade path, which React may not process synchronously
+        // after a frozen page resumes.
+        scramble();
+      }
     };
-  }, []);
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, [scramble]);
 
   return (
     <motion.span

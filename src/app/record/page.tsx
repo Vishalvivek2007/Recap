@@ -11,6 +11,8 @@ import { Orb } from "@/components/orb/Orb";
 import { MagneticButton } from "@/components/shared/MagneticButton";
 import { AuroraBackground } from "@/components/landing/AuroraBackground";
 import { formatDuration } from "@/lib/utils/format";
+import { storeRecording } from "@/lib/audio/recordingStore";
+import { ROUTES } from "@/lib/constants";
 
 export default function RecordPage() {
   const router = useRouter();
@@ -40,16 +42,12 @@ export default function RecordPage() {
     }
   };
 
-  // When recording completes, navigate to processing page
+  // When recording completes, stash the blob and navigate to the processing page
   React.useEffect(() => {
-    if (result) {
-      // Store blob in sessionStorage as base64 for the processing page to pick up
-      // (We'll wire actual IndexedDB save in STEP 13)
-      const id = crypto.randomUUID();
-      console.log("Recording complete:", { id, blob: result.blob, duration: result.durationMs });
-      // For now, just log. In STEP 13 we route to /processing/[id]
-      // router.push(`/processing/${id}`);
-    }
+    if (!result) return;
+    const id = crypto.randomUUID();
+    storeRecording(id, { blob: result.blob, durationMs: result.durationMs });
+    router.push(ROUTES.processing(id));
   }, [result, router]);
 
   const buttonLabel = (() => {
