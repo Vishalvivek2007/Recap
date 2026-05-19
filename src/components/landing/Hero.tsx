@@ -31,7 +31,7 @@ export function Hero() {
         transition={{ duration: 1, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
         className="relative mb-8"
       >
-        <Orb size="lg" showParticles interactive />
+        <Orb size="lg" interactive />
       </motion.div>
 
       {/* Headline */}

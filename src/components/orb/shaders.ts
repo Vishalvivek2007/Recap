@@ -108,17 +108,22 @@ export const fragmentShader = /* glsl */ `
     float t2 = clamp(fresnel, 0.0, 1.0);
 
     vec3 color = mix(uColorA, uColorB, t1);
-    color = mix(color, uColorC, t2 * 0.7);
+    color = mix(color, uColorC, t2 * 0.6);
 
-    // Audio level pumps the brightness
-    float brightness = 1.0 + uAudioLevel * 0.8;
+    // Dark-center: pull toward near-black at the face, bright at edges
+    float centerDark = pow(1.0 - fresnel, 3.0) * 0.82;
+    color *= (1.0 - centerDark);
+
+    // Audio level pumps brightness — kept low so the orb stays dark
+    float brightness = 0.6 + uAudioLevel * 0.3;
     color *= brightness;
 
-    // Edge glow
-    color += uColorC * fresnel * 0.6;
+    // Edge glow — brand colours bleeding at the rim (dimmed)
+    color += uColorC * fresnel * 0.2;
+    color += uColorA * fresnel * 0.1;
 
     // Subtle time-based shimmer
-    color += vec3(sin(uTime * 2.0 + vPosition.y * 4.0) * 0.05);
+    color += vec3(sin(uTime * 2.0 + vPosition.y * 4.0) * 0.015);
 
     gl_FragColor = vec4(color, 1.0);
   }

@@ -149,7 +149,6 @@ export function ProcessingClient({ id }: Props) {
             audioLevel={currentPhaseConfig?.audioLevel ?? 0}
             isActive={phase !== "error"}
             size="xl"
-            showParticles
             interactive={false}
           />
         </motion.div>

@@ -18,7 +18,6 @@ interface OrbProps {
   isActive?: boolean;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
-  showParticles?: boolean;
   interactive?: boolean;
   forceFallback?: boolean;
 }

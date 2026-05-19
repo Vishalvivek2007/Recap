@@ -9,14 +9,12 @@ import { Vector2 } from "three";
 
 import { OrbMaterialImpl } from "./OrbMaterial";
 import "./OrbMaterial"; // registers the material
-import { ParticleField } from "./ParticleField";
 
 interface AudioOrbProps {
   audioLevel?: number; // 0..1
   isActive?: boolean; // recording state
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
-  showParticles?: boolean;
   interactive?: boolean; // follow cursor
 }
 
@@ -93,13 +91,18 @@ export function AudioOrb({
   isActive = false,
   size = "lg",
   className = "",
-  showParticles = true,
   interactive = true,
 }: AudioOrbProps) {
   return (
     <div
       className={`relative ${SIZE_MAP[size]} ${className}`}
     >
+      {/*
+        Canvas is absolutely positioned 20% outside on top/left/right so Bloom
+        and glow have space to bleed without hard-clipping at the sphere edge.
+        Bottom aligns with the container bottom (top:-20% + height:120% = 0 overflow
+        downward) so the canvas never covers content below the orb.
+      */}
       <Canvas
         camera={{ position: [0, 0, 3.2], fov: 50 }}
         dpr={[1, 2]}
@@ -111,10 +114,10 @@ export function AudioOrb({
         }}
         style={{
           position: "absolute",
-          top: "-15%",
-          left: "-15%",
-          width: "130%",
-          height: "130%",
+          top: "-20%",
+          left: "-20%",
+          width: "140%",
+          height: "120%",
           background: "transparent",
         }}
         onCreated={({ gl, scene }) => {
@@ -122,7 +125,6 @@ export function AudioOrb({
           scene.background = null;
         }}
       >
-        {/* Subtle key + rim lighting (the shader is mostly emissive) */}
         <ambientLight intensity={0.3} />
         <pointLight position={[5, 5, 5]} intensity={0.8} color="#ff6b9d" />
         <pointLight position={[-5, -5, 5]} intensity={0.6} color="#7c5cff" />
@@ -133,17 +135,13 @@ export function AudioOrb({
           interactive={interactive}
         />
 
-        {showParticles && (
-          <ParticleField audioLevel={audioLevel} count={150} radius={2.2} />
-        )}
-
         {/* multisampling=0: MSAA render targets don't support alpha channels,
             causing an opaque rectangle in transparent canvases.
             frameBufferType=HalfFloat: ensures FBOs preserve alpha properly. */}
         <EffectComposer multisampling={0} frameBufferType={THREE.HalfFloatType}>
           <Bloom
-            intensity={1.2}
-            luminanceThreshold={0.15}
+            intensity={0.6}
+            luminanceThreshold={0.3}
             luminanceSmoothing={0.9}
             mipmapBlur
           />
@@ -161,10 +159,10 @@ export function AudioOrb({
         className="absolute inset-0 -z-10 rounded-full pointer-events-none"
         style={{
           background: `radial-gradient(circle, hsl(var(--accent) / ${
-            0.25 + audioLevel * 0.4
+            0.15 + audioLevel * 0.25
           }) 0%, transparent 60%)`,
           filter: "blur(40px)",
-          transform: `scale(${1 + audioLevel * 0.3})`,
+          transform: `scale(${1 + audioLevel * 0.2})`,
           transition: "transform 0.1s linear",
         }}
       />

@@ -143,7 +143,6 @@ export default function RecordPage() {
           audioLevel={audioLevel}
           isActive={isRecording}
           size="xl"
-          showParticles
           interactive
         />
 
