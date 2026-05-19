@@ -7,7 +7,7 @@ import { Mic, Square, Upload, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 import { useRecorder } from "@/hooks/useRecorder";
-import { PlaceholderOrb } from "@/components/orb/PlaceholderOrb";
+import { Orb } from "@/components/orb/Orb";
 import { MagneticButton } from "@/components/shared/MagneticButton";
 import { AuroraBackground } from "@/components/landing/AuroraBackground";
 import { formatDuration } from "@/lib/utils/format";
@@ -96,7 +96,13 @@ export default function RecordPage() {
 
       <main className="min-h-screen flex flex-col items-center justify-center px-6 gap-12 relative">
         {/* The orb */}
-        <PlaceholderOrb audioLevel={audioLevel} isRecording={isRecording} />
+        <Orb
+          audioLevel={audioLevel}
+          isActive={isRecording}
+          size="xl"
+          showParticles
+          interactive
+        />
 
         {/* Elapsed time */}
         <div className="flex flex-col items-center gap-2">

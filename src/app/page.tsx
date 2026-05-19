@@ -1,6 +1,7 @@
 import { AuroraBackground } from "@/components/landing/AuroraBackground";
 import { Navbar } from "@/components/shared/Navbar";
 import { Hero } from "@/components/landing/Hero";
+import { LiveDemoPanel } from "@/components/landing/LiveDemoPanel";
 import { FeatureBlocks } from "@/components/landing/FeatureBlocks";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { FAQ } from "@/components/landing/FAQ";
@@ -13,6 +14,7 @@ export default function Home() {
       <Navbar />
       <main className="relative">
         <Hero />
+        <LiveDemoPanel />
         <FeatureBlocks />
         <HowItWorks />
         <FAQ />

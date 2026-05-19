@@ -5,6 +5,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
 import { SmoothScroll } from "@/components/shared/SmoothScroll";
 import { GrainOverlay } from "@/components/shared/GrainOverlay";
+import { CursorBlob } from "@/components/shared/CursorBlob";
 
 
 const inter = Inter({
@@ -65,6 +66,7 @@ export default function RootLayout({
         >
           <SmoothScroll />
           <GrainOverlay />
+          <CursorBlob />
           {children}
         </ThemeProvider>
       </body>
