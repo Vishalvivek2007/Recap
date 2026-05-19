@@ -26,9 +26,9 @@ export function Hero() {
 
       {/* The big orb — front and center */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.6, y: 40 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 1.4, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
         className="relative mb-8"
       >
         <Orb size="lg" showParticles interactive />

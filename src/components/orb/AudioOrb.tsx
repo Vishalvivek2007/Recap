@@ -99,7 +99,6 @@ export function AudioOrb({
   return (
     <div
       className={`relative ${SIZE_MAP[size]} ${className}`}
-      style={{ background: "transparent" }}
     >
       <Canvas
         camera={{ position: [0, 0, 3.2], fov: 50 }}
@@ -110,7 +109,14 @@ export function AudioOrb({
           premultipliedAlpha: false,
           powerPreference: "high-performance",
         }}
-        style={{ background: "transparent" }}
+        style={{
+          position: "absolute",
+          top: "-15%",
+          left: "-15%",
+          width: "130%",
+          height: "130%",
+          background: "transparent",
+        }}
         onCreated={({ gl, scene }) => {
           gl.setClearColor(0x000000, 0);
           scene.background = null;
