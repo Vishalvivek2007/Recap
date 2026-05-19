@@ -42,13 +42,14 @@ export function PlaceholderOrb({
         className="relative size-56 md:size-64 rounded-full"
         style={{
           background: `
-            radial-gradient(circle at 30% 30%, hsl(var(--accent-glow)) 0%, transparent 50%),
-            radial-gradient(circle at 70% 70%, hsl(var(--accent-pink)) 0%, transparent 50%),
-            radial-gradient(circle at 50% 50%, hsl(var(--accent)) 0%, hsl(var(--accent-amber)) 100%)
+            radial-gradient(circle at 50% 50%, #0a0612 0%, #0a0612 35%, transparent 70%),
+            radial-gradient(circle at 30% 30%, hsl(var(--accent) / 0.7) 0%, transparent 55%),
+            radial-gradient(circle at 70% 70%, hsl(var(--accent-pink) / 0.6) 0%, transparent 55%),
+            radial-gradient(circle at 50% 80%, hsl(var(--accent-amber) / 0.5) 0%, transparent 50%)
           `,
           boxShadow: `
-            0 0 ${60 + audioLevel * 80}px ${glowIntensity * 30}px hsl(var(--accent) / ${glowIntensity * 0.5}),
-            inset 0 0 60px rgba(255, 255, 255, 0.15)
+            0 0 ${50 + audioLevel * 60}px ${glowIntensity * 20}px hsl(var(--accent) / ${glowIntensity * 0.4}),
+            inset 0 0 40px rgba(0, 0, 0, 0.6)
           `,
           filter: `blur(${isRecording ? 0 : 0.5}px)`,
         }}

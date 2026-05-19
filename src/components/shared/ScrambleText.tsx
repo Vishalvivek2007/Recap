@@ -35,7 +35,7 @@ export function ScrambleText({
 
   const [mounted, setMounted] = React.useState(false);
   const [display, setDisplay] = React.useState(text);
-  const hasRunRef = React.useRef(false);
+  const [hasRun, setHasRun] = React.useState(false);
   const intervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Mount: swap to scrambled placeholder on the client
@@ -74,36 +74,17 @@ export function ScrambleText({
     }, 40);
   }, [text, duration]);
 
-  // autoStart path — deps:[mounted] only so inView changes never cancel this timer
+  // Trigger via autoStart (mount + delay) OR inView, whichever is appropriate
   React.useEffect(() => {
-    if (!autoStart || !mounted || hasRunRef.current) return;
-    hasRunRef.current = true;
-    const t = setTimeout(scramble, delay);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted]);
+    if (!mounted || hasRun) return;
+    if (autoStart || inView) {
+      setHasRun(true);
+      const timer = setTimeout(scramble, delay);
+      return () => clearTimeout(timer);
+    }
+  }, [mounted, inView, hasRun, autoStart, scramble, delay]);
 
-  // inView path — for non-autoStart elements scrolled into view
-  React.useEffect(() => {
-    if (autoStart || !inView || hasRunRef.current) return;
-    hasRunRef.current = true;
-    const t = setTimeout(scramble, delay);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inView]);
 
-  React.useEffect(() => {
-    const handlePageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) {
-        // Page restored from bfcache — call scramble directly instead of relying
-        // on the state-cascade path, which React may not process synchronously
-        // after a frozen page resumes.
-        scramble();
-      }
-    };
-    window.addEventListener("pageshow", handlePageShow);
-    return () => window.removeEventListener("pageshow", handlePageShow);
-  }, [scramble]);
 
   return (
     <motion.span
