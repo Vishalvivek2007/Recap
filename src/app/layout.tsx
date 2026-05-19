@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/shared/ThemeProvider";
 import { SmoothScroll } from "@/components/shared/SmoothScroll";
 import { GrainOverlay } from "@/components/shared/GrainOverlay";
 import { CursorBlob } from "@/components/shared/CursorBlob";
+import { Toaster } from "@/components/ui/sonner";
 
 
 const inter = Inter({
@@ -68,6 +69,7 @@ export default function RootLayout({
           <GrainOverlay />
           <CursorBlob />
           {children}
+          <Toaster richColors position="bottom-right" />
         </ThemeProvider>
       </body>
     </html>

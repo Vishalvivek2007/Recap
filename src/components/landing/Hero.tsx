@@ -20,7 +20,7 @@ export function Hero() {
       >
         <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass text-xs text-text-secondary">
           <span className="size-1.5 rounded-full bg-success animate-pulse" />
-          Powered by Whisper + Llama 3.3 — runs in your browser
+          Groq Whisper + Llama 3.3 · Notes stay in your browser
         </span>
       </motion.div>
 
