@@ -25,6 +25,7 @@ const Word = React.memo(
       <span
         role="button"
         tabIndex={-1}
+        data-active={isActive ? "true" : undefined}
         onMouseDown={(e) => {
           // Prevent the default text-selection start so a fast click doesn't
           // accidentally select the word instead of seeking the audio.

@@ -21,6 +21,7 @@ import type { Meeting, ActionItem, Decision, KeyPointGroup, TranscriptWord } fro
 import { ROUTES } from "@/lib/constants";
 import { WaveformPlayer, type WaveformPlayerHandle } from "@/components/result/WaveformPlayer";
 import { WordTranscript } from "@/components/result/WordTranscript";
+import { SpeakerTranscript } from "@/components/result/SpeakerTranscript";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -206,8 +207,16 @@ function TranscriptTab({
         <CopyButton text={transcript.text} />
       </div>
 
-      {hasWords ? (
-        // Word-level clickable transcript with playback sync
+      {hasWords && transcript.speakers?.length ? (
+        // Speaker-attributed word-level transcript
+        <SpeakerTranscript
+          words={transcript.words}
+          speakers={transcript.speakers}
+          activeWordIdx={activeWordIdx}
+          onWordClick={onWordClick}
+        />
+      ) : hasWords ? (
+        // Flat word-level transcript (single speaker or no speaker data)
         <WordTranscript
           words={transcript.words}
           activeWordIdx={activeWordIdx}

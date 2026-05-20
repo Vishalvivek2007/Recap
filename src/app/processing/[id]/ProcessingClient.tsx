@@ -8,7 +8,7 @@ import { AuroraBackground } from "@/components/landing/AuroraBackground";
 import { peekRecording, clearRecording } from "@/lib/audio/recordingStore";
 import { saveMeeting } from "@/lib/db/queries";
 import { API_ROUTES, ROUTES } from "@/lib/constants";
-import type { Transcript, Summary } from "@/types/meeting";
+import type { Transcript, Summary, SpeakerSegment } from "@/types/meeting";
 
 interface Props {
   id: string;
@@ -33,7 +33,7 @@ const PHASES: Array<{
   {
     key: "summarizing",
     label: "Extracting insights",
-    sublabel: "Identifying key points, decisions & actions...",
+    sublabel: "Identifying key points, decisions & speakers...",
     audioLevel: 0.65,
     stepIndex: 1,
   },
@@ -87,21 +87,38 @@ export function ProcessingClient({ id }: Props) {
 
         const { transcript }: { transcript: Transcript } = await transcribeRes.json();
 
-        // ── Phase 2: Summarize ───────────────────────────────────────────
+        // ── Phase 2: Summarize + Diarize (parallel) ─────────────────────
         setPhase("summarizing");
 
-        const summarizeRes = await fetch(API_ROUTES.summarize, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: transcript.text }),
-        });
+        const [summarizeSettled, diarizeSettled] = await Promise.allSettled([
+          fetch(API_ROUTES.summarize, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: transcript.text }),
+          }),
+          fetch(API_ROUTES.diarize, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ segments: transcript.segments }),
+          }),
+        ]);
 
-        if (!summarizeRes.ok) {
-          const err = await summarizeRes.json().catch(() => ({}));
-          throw new Error(err.error ?? `Summarization failed (${summarizeRes.status})`);
+        if (summarizeSettled.status === "rejected" || !summarizeSettled.value.ok) {
+          const errBody =
+            summarizeSettled.status === "fulfilled"
+              ? await summarizeSettled.value.json().catch(() => ({}))
+              : {};
+          throw new Error(errBody.error ?? `Summarization failed`);
         }
 
-        const { summary }: { summary: Summary } = await summarizeRes.json();
+        const { summary }: { summary: Summary } = await summarizeSettled.value.json();
+
+        // Speaker separation is best-effort — failure silently degrades to flat transcript
+        if (diarizeSettled.status === "fulfilled" && diarizeSettled.value.ok) {
+          const diarizeData = await diarizeSettled.value.json().catch(() => ({}));
+          const speakers: SpeakerSegment[] = diarizeData.speakers ?? [];
+          if (speakers.length) transcript.speakers = speakers;
+        }
 
         // ── Phase 3: Save ────────────────────────────────────────────────
         setPhase("saving");

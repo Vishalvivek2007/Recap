@@ -16,11 +16,20 @@ export interface TranscriptWord {
   end: number;
 }
 
+export interface SpeakerSegment {
+  speaker: string; // "Speaker 1", "Speaker 2", …
+  start: number;   // seconds
+  end: number;
+  text: string;
+}
+
 export interface Transcript {
   text: string;
   segments: TranscriptSegment[];
   words: TranscriptWord[];
   language?: string;
+  /** AI-inferred speaker turns (optional; absent on single-speaker recordings) */
+  speakers?: SpeakerSegment[];
 }
 
 export interface ActionItem {

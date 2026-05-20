@@ -15,11 +15,13 @@ export const RECORDING_BITRATE = 64_000; // 64 kbps opus — clear for speech, k
 // AI models (Groq)
 export const TRANSCRIPTION_MODEL = "whisper-large-v3";
 export const SUMMARIZATION_MODEL = "llama-3.3-70b-versatile";
+export const DIARIZATION_MODEL = "llama-3.3-70b-versatile";
 
 // API routes
 export const API_ROUTES = {
   transcribe: "/api/transcribe",
   summarize: "/api/summarize",
+  diarize: "/api/diarize",
 } as const;
 
 // Routes
