@@ -17,12 +17,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getMeeting } from "@/lib/db/queries";
-import type { Meeting, ActionItem, Decision, KeyPointGroup } from "@/types/meeting";
+import type { Meeting, ActionItem, Decision, KeyPointGroup, TranscriptWord } from "@/types/meeting";
 import { ROUTES } from "@/lib/constants";
+import { WaveformPlayer, type WaveformPlayerHandle } from "@/components/result/WaveformPlayer";
+import { WordTranscript } from "@/components/result/WordTranscript";
 
-interface Props {
-  id: string;
-}
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatDate(ms: number): string {
   return new Intl.DateTimeFormat("en-US", {
@@ -40,6 +40,41 @@ function formatDuration(secs: number): string {
   if (m === 0) return `${s}s`;
   return `${m}m ${s > 0 ? `${s}s` : ""}`.trim();
 }
+
+function formatTimecode(secs: number): string {
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+/**
+ * Binary-search the word whose time range contains `time`.
+ * Returns -1 if the current time falls in a gap between words.
+ */
+function findActiveWord(words: TranscriptWord[], time: number): number {
+  if (words.length === 0) return -1;
+
+  let lo = 0,
+    hi = words.length - 1,
+    candidate = -1;
+
+  // Find rightmost word with start <= time
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (words[mid].start <= time) {
+      candidate = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+
+  // Confirm time falls within that word's end
+  if (candidate >= 0 && time < words[candidate].end) return candidate;
+  return -1;
+}
+
+// ─── CopyButton ───────────────────────────────────────────────────────────────
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = React.useState(false);
@@ -84,21 +119,13 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-type Tab = "overview" | "transcript" | "actions" | "decisions";
-
-const TABS: Array<{ key: Tab; label: string; icon: React.ReactNode }> = [
-  { key: "overview", label: "Overview", icon: <Zap className="size-3.5" /> },
-  { key: "transcript", label: "Transcript", icon: <FileText className="size-3.5" /> },
-  { key: "actions", label: "Action Items", icon: <ListChecks className="size-3.5" /> },
-  { key: "decisions", label: "Decisions", icon: <Gavel className="size-3.5" /> },
-];
+// ─── Tab components ───────────────────────────────────────────────────────────
 
 function OverviewTab({ meeting }: { meeting: Meeting }) {
   const { summary } = meeting;
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Topics */}
       {summary.topics.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {summary.topics.map((t) => (
@@ -112,7 +139,6 @@ function OverviewTab({ meeting }: { meeting: Meeting }) {
         </div>
       )}
 
-      {/* Key Points */}
       {summary.keyPoints.length > 0 && (
         <div className="flex flex-col gap-4">
           {summary.keyPoints.map((group: KeyPointGroup) => (
@@ -122,7 +148,10 @@ function OverviewTab({ meeting }: { meeting: Meeting }) {
               </h3>
               <ul className="flex flex-col gap-1.5">
                 {group.points.map((point, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-text-primary">
+                  <li
+                    key={i}
+                    className="flex items-start gap-2 text-sm text-text-primary"
+                  >
                     <ChevronRight className="size-3.5 mt-0.5 shrink-0 text-accent" />
                     {point}
                   </li>
@@ -133,7 +162,6 @@ function OverviewTab({ meeting }: { meeting: Meeting }) {
         </div>
       )}
 
-      {/* Open Questions */}
       {summary.questions.length > 0 && (
         <div className="flex flex-col gap-2">
           <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wide">
@@ -155,42 +183,58 @@ function OverviewTab({ meeting }: { meeting: Meeting }) {
   );
 }
 
-function TranscriptTab({ meeting }: { meeting: Meeting }) {
+function TranscriptTab({
+  meeting,
+  activeWordIdx,
+  onWordClick,
+}: {
+  meeting: Meeting;
+  activeWordIdx: number;
+  onWordClick: (start: number) => void;
+}) {
   const { transcript } = meeting;
+  const hasWords = transcript.words.length > 0;
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <span className="text-xs text-text-muted">
-          {transcript.language ? `Language: ${transcript.language.toUpperCase()}` : ""}
+          {transcript.language
+            ? `Language: ${transcript.language.toUpperCase()}`
+            : ""}
         </span>
         <CopyButton text={transcript.text} />
       </div>
 
-      {transcript.segments.length > 0 ? (
+      {hasWords ? (
+        // Word-level clickable transcript with playback sync
+        <WordTranscript
+          words={transcript.words}
+          activeWordIdx={activeWordIdx}
+          onWordClick={onWordClick}
+        />
+      ) : transcript.segments.length > 0 ? (
+        // Segment-level fallback (no word timestamps)
         <div className="flex flex-col gap-3">
           {transcript.segments.map((seg) => (
             <div key={seg.id} className="flex gap-3">
               <span className="text-xs text-text-muted font-mono mt-0.5 w-12 shrink-0">
                 {formatTimecode(seg.start)}
               </span>
-              <p className="text-sm text-text-primary leading-relaxed">{seg.text}</p>
+              <p className="text-sm text-text-primary leading-relaxed">
+                {seg.text}
+              </p>
             </div>
           ))}
         </div>
       ) : (
+        // Plain text fallback
         <p className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap">
           {transcript.text}
         </p>
       )}
     </div>
   );
-}
-
-function formatTimecode(secs: number): string {
-  const m = Math.floor(secs / 60);
-  const s = Math.floor(secs % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 function ActionsTab({ items }: { items: ActionItem[] }) {
@@ -205,10 +249,7 @@ function ActionsTab({ items }: { items: ActionItem[] }) {
   return (
     <div className="flex flex-col gap-3">
       {items.map((item, i) => (
-        <div
-          key={i}
-          className="flex items-start gap-4 p-4 rounded-xl glass"
-        >
+        <div key={i} className="flex items-start gap-4 p-4 rounded-xl glass">
           <div className="size-6 rounded-full bg-gradient-hero shrink-0 flex items-center justify-center text-white text-xs font-bold mt-0.5">
             {i + 1}
           </div>
@@ -251,11 +292,42 @@ function DecisionsTab({ decisions }: { decisions: Decision[] }) {
   );
 }
 
-export function ResultClient({ id }: Props) {
+// ─── Main component ───────────────────────────────────────────────────────────
+
+type Tab = "overview" | "transcript" | "actions" | "decisions";
+
+const TABS: Array<{ key: Tab; label: string; icon: React.ReactNode }> = [
+  { key: "overview", label: "Overview", icon: <Zap className="size-3.5" /> },
+  {
+    key: "transcript",
+    label: "Transcript",
+    icon: <FileText className="size-3.5" />,
+  },
+  {
+    key: "actions",
+    label: "Action Items",
+    icon: <ListChecks className="size-3.5" />,
+  },
+  {
+    key: "decisions",
+    label: "Decisions",
+    icon: <Gavel className="size-3.5" />,
+  },
+];
+
+export function ResultClient({ id }: { id: string }) {
   const router = useRouter();
   const [meeting, setMeeting] = React.useState<Meeting | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [activeTab, setActiveTab] = React.useState<Tab>("overview");
+
+  // ── Audio playback sync ──────────────────────────────────────────────────
+  const playerRef = React.useRef<WaveformPlayerHandle>(null);
+  const [activeWordIdx, setActiveWordIdx] = React.useState(-1);
+  // Ref-tracked index so the timeupdate handler never goes stale
+  const activeWordIdxRef = React.useRef(-1);
+  // Stable ref to words so handleTimeUpdate doesn't capture a stale meeting
+  const wordsRef = React.useRef<TranscriptWord[]>([]);
 
   React.useEffect(() => {
     getMeeting(id).then((m) => {
@@ -264,9 +336,30 @@ export function ResultClient({ id }: Props) {
         return;
       }
       setMeeting(m);
+      wordsRef.current = m.transcript.words;
       setLoading(false);
     });
   }, [id, router]);
+
+  // Called every audio frame — binary-searches for the active word and only
+  // calls setState when the index actually changes (avoids per-frame re-renders)
+  const handleTimeUpdate = React.useCallback((time: number) => {
+    const words = wordsRef.current;
+    if (!words.length) return;
+    const idx = findActiveWord(words, time);
+    if (idx !== activeWordIdxRef.current) {
+      activeWordIdxRef.current = idx;
+      setActiveWordIdx(idx);
+    }
+  }, []);
+
+  // Word click → seek audio + start playing
+  const handleWordClick = React.useCallback((start: number) => {
+    playerRef.current?.seekTo(start);
+    playerRef.current?.play();
+  }, []);
+
+  // ── Render ───────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -276,7 +369,7 @@ export function ResultClient({ id }: Props) {
           transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
           className="text-text-muted text-sm"
         >
-          Loading...
+          Loading…
         </motion.div>
       </div>
     );
@@ -290,12 +383,18 @@ export function ResultClient({ id }: Props) {
     `\n## TL;DR\n${meeting.summary.tldr}`,
     meeting.summary.keyPoints.length > 0
       ? `\n## Key Points\n${meeting.summary.keyPoints
-          .map((g) => `### ${g.topic}\n${g.points.map((p) => `- ${p}`).join("\n")}`)
+          .map(
+            (g) =>
+              `### ${g.topic}\n${g.points.map((p) => `- ${p}`).join("\n")}`
+          )
           .join("\n\n")}`
       : "",
     meeting.summary.actionItems.length > 0
       ? `\n## Action Items\n${meeting.summary.actionItems
-          .map((a, i) => `${i + 1}. [${a.assignee}] ${a.task}${a.deadline ? ` — ${a.deadline}` : ""}`)
+          .map(
+            (a, i) =>
+              `${i + 1}. [${a.assignee}] ${a.task}${a.deadline ? ` — ${a.deadline}` : ""}`
+          )
           .join("\n")}`
       : "",
     meeting.summary.decisions.length > 0
@@ -310,7 +409,7 @@ export function ResultClient({ id }: Props) {
 
   return (
     <div className="min-h-screen bg-bg-primary">
-      {/* Header */}
+      {/* Sticky header */}
       <header className="sticky top-0 z-50 bg-bg-primary/80 backdrop-blur-xl border-b border-border-subtle">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <Link
@@ -332,7 +431,7 @@ export function ResultClient({ id }: Props) {
                 const blob = new Blob([fullText], { type: "text/markdown" });
                 const a = document.createElement("a");
                 a.href = URL.createObjectURL(blob);
-                a.download = `${meeting?.summary.title ?? "meeting"}.md`;
+                a.download = `${meeting.summary.title ?? "meeting"}.md`;
                 a.click();
                 URL.revokeObjectURL(a.href);
               }}
@@ -356,24 +455,40 @@ export function ResultClient({ id }: Props) {
           </span>
         </div>
 
-        {/* TLDR card */}
+        {/* TL;DR */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="relative p-6 rounded-2xl overflow-hidden"
           style={{
-            background: "linear-gradient(135deg, hsl(var(--accent) / 0.1) 0%, hsl(var(--accent-pink) / 0.06) 100%)",
+            background:
+              "linear-gradient(135deg, hsl(var(--accent) / 0.1) 0%, hsl(var(--accent-pink) / 0.06) 100%)",
             border: "1px solid hsl(var(--accent) / 0.2)",
           }}
         >
-          <div className="flex items-start gap-3">
-            <span className="text-xs font-bold tracking-widest text-accent uppercase mt-0.5">
-              TL;DR
-            </span>
-          </div>
-          <p className="mt-2 text-text-primary leading-relaxed">{meeting.summary.tldr}</p>
+          <span className="text-xs font-bold tracking-widest text-accent uppercase">
+            TL;DR
+          </span>
+          <p className="mt-2 text-text-primary leading-relaxed">
+            {meeting.summary.tldr}
+          </p>
         </motion.div>
+
+        {/* Audio waveform player */}
+        {meeting.audioBlob && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <WaveformPlayer
+              ref={playerRef}
+              audioBlob={meeting.audioBlob}
+              onTimeUpdate={handleTimeUpdate}
+            />
+          </motion.div>
+        )}
 
         {/* Tabs */}
         <div className="flex flex-col gap-6">
@@ -391,16 +506,18 @@ export function ResultClient({ id }: Props) {
               >
                 {tab.icon}
                 {tab.label}
-                {tab.key === "actions" && meeting.summary.actionItems.length > 0 && (
-                  <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-accent text-white text-xs leading-none">
-                    {meeting.summary.actionItems.length}
-                  </span>
-                )}
-                {tab.key === "decisions" && meeting.summary.decisions.length > 0 && (
-                  <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-accent-pink text-white text-xs leading-none">
-                    {meeting.summary.decisions.length}
-                  </span>
-                )}
+                {tab.key === "actions" &&
+                  meeting.summary.actionItems.length > 0 && (
+                    <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-accent text-white text-xs leading-none">
+                      {meeting.summary.actionItems.length}
+                    </span>
+                  )}
+                {tab.key === "decisions" &&
+                  meeting.summary.decisions.length > 0 && (
+                    <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-accent-pink text-white text-xs leading-none">
+                      {meeting.summary.decisions.length}
+                    </span>
+                  )}
               </button>
             ))}
           </div>
@@ -415,9 +532,19 @@ export function ResultClient({ id }: Props) {
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             >
               {activeTab === "overview" && <OverviewTab meeting={meeting} />}
-              {activeTab === "transcript" && <TranscriptTab meeting={meeting} />}
-              {activeTab === "actions" && <ActionsTab items={meeting.summary.actionItems} />}
-              {activeTab === "decisions" && <DecisionsTab decisions={meeting.summary.decisions} />}
+              {activeTab === "transcript" && (
+                <TranscriptTab
+                  meeting={meeting}
+                  activeWordIdx={activeWordIdx}
+                  onWordClick={handleWordClick}
+                />
+              )}
+              {activeTab === "actions" && (
+                <ActionsTab items={meeting.summary.actionItems} />
+              )}
+              {activeTab === "decisions" && (
+                <DecisionsTab decisions={meeting.summary.decisions} />
+              )}
             </motion.div>
           </AnimatePresence>
         </div>
