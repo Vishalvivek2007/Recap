@@ -109,6 +109,7 @@ export const WaveformPlayer = React.forwardRef<
     });
 
     wsRef.current = ws;
+    let destroyed = false;
 
     ws.on("ready", (dur) => {
       setDuration(dur);
@@ -126,6 +127,7 @@ export const WaveformPlayer = React.forwardRef<
       onTimeUpdateRef.current?.(t);
     });
     ws.on("error", (err) => {
+      if (destroyed) return;
       console.error("[WaveformPlayer]", err);
       setHasError(true);
     });
@@ -133,12 +135,14 @@ export const WaveformPlayer = React.forwardRef<
     // We manage the URL ourselves so we can guarantee revocation on unmount.
     const url = URL.createObjectURL(audioBlob);
     ws.load(url).catch((err) => {
+      if (destroyed) return; // AbortError from cleanup; not a real error
       console.error("[WaveformPlayer] load error:", err);
       setHasError(true);
     });
 
     return () => {
-      ws.destroy();
+      destroyed = true;
+      try { ws.destroy(); } catch {} // destroy() aborts in-flight fetch → AbortError; safe to swallow
       wsRef.current = null;
       URL.revokeObjectURL(url);
     };
