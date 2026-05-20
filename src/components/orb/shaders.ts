@@ -65,13 +65,13 @@ export const vertexShader = /* glsl */ `
   void main() {
     vNormal = normal;
 
-    // Layered noise — two octaves, different speeds
-    float n1 = snoise(position * 1.5 + vec3(uTime * 0.3));
-    float n2 = snoise(position * 3.0 + vec3(uTime * 0.5));
+    // Layered noise — two octaves, halved speeds for calm motion
+    float n1 = snoise(position * 1.5 + vec3(uTime * 0.15));
+    float n2 = snoise(position * 3.0 + vec3(uTime * 0.25));
     float noise = n1 * 0.6 + n2 * 0.4;
 
-    // Displacement combines noise + audio
-    float audioBoost = 0.4 + uAudioLevel * 1.6;
+    // Reduced displacement — surface ripples gently instead of thrashing
+    float audioBoost = 0.3 + uAudioLevel * 0.9;
     float displacement = noise * uDistortion * audioBoost;
     vDisplacement = displacement;
 
@@ -83,47 +83,56 @@ export const vertexShader = /* glsl */ `
 `;
 
 /**
- * Fragment shader: iridescent gradient with fresnel rim glow.
- * Three colors blend by displacement + viewing angle.
+ * Fragment shader: deep iridescent pearl look.
+ * Dark center, thin-film rainbow sheen at the rim only.
+ * Audio shifts hue phase, never blows out luminance.
  */
 export const fragmentShader = /* glsl */ `
   uniform float uTime;
   uniform float uAudioLevel;
-  uniform vec3 uColorA;
-  uniform vec3 uColorB;
-  uniform vec3 uColorC;
 
   varying vec3 vNormal;
   varying vec3 vPosition;
   varying float vDisplacement;
 
   void main() {
-    // Fresnel: surfaces facing away from camera glow brighter
+    // Fresnel: 0 at center (facing camera), 1 at rim (glancing angle)
     vec3 viewDir = normalize(cameraPosition - vPosition);
-    float fresnel = 1.0 - dot(viewDir, normalize(vNormal));
-    fresnel = pow(fresnel, 2.2);
+    float fresnel = 1.0 - max(dot(viewDir, normalize(vNormal)), 0.0);
+    fresnel = pow(fresnel, 2.0);
 
-    // Three-color blend driven by displacement + fresnel
-    float t1 = clamp(vDisplacement * 2.5 + 0.5, 0.0, 1.0);
-    float t2 = clamp(fresnel, 0.0, 1.0);
+    // Thin-film phase: position variation + slow time + gentle audio hue shift
+    // Audio moves the color through the palette — NOT brightness
+    float filmPhase = vDisplacement * 3.0 + uTime * 0.04 + uAudioLevel * 0.22;
 
-    vec3 color = mix(uColorA, uColorB, t1);
-    color = mix(color, uColorC, t2 * 0.6);
+    // Dark/desaturated brand palette: deep indigo → dark rose → dark amber
+    vec3 c0 = vec3(0.18, 0.10, 0.50);
+    vec3 c1 = vec3(0.46, 0.14, 0.30);
+    vec3 c2 = vec3(0.46, 0.26, 0.06);
 
-    // Dark-center: pull toward near-black at the face, bright at edges
-    float centerDark = pow(1.0 - fresnel, 3.0) * 0.82;
-    color *= (1.0 - centerDark);
+    float seg = fract(filmPhase) * 3.0;
+    vec3 iridescent;
+    if (seg < 1.0) {
+      iridescent = mix(c0, c1, smoothstep(0.0, 1.0, seg));
+    } else if (seg < 2.0) {
+      iridescent = mix(c1, c2, smoothstep(0.0, 1.0, seg - 1.0));
+    } else {
+      iridescent = mix(c2, c0, smoothstep(0.0, 1.0, seg - 2.0));
+    }
 
-    // Audio level pumps brightness — kept low so the orb stays dark
-    float brightness = 0.6 + uAudioLevel * 0.3;
-    color *= brightness;
+    // Center stays dark — iridescence lives at the rim only
+    float rim = pow(fresnel, 1.8);
+    vec3 darkBase = vec3(0.04, 0.03, 0.10);
+    vec3 color = mix(darkBase, iridescent, rim);
 
-    // Edge glow — brand colours bleeding at the rim (dimmed)
-    color += uColorC * fresnel * 0.2;
-    color += uColorA * fresnel * 0.1;
+    // Audio: gently brightens rim sheen — no luminance pump at center
+    color += iridescent * rim * uAudioLevel * 0.28;
 
-    // Subtle time-based shimmer
-    color += vec3(sin(uTime * 2.0 + vPosition.y * 4.0) * 0.015);
+    // Slow rimlight shimmer
+    color += vec3(sin(uTime * 0.6 + vPosition.y * 3.0) * 0.012) * rim;
+
+    // Hard brightness cap — prevents any blowout regardless of audio
+    color = clamp(color, vec3(0.0), vec3(0.88, 0.72, 0.95));
 
     gl_FragColor = vec4(color, 1.0);
   }

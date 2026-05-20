@@ -16,10 +16,7 @@ export class OrbMaterialImpl extends THREE.ShaderMaterial {
       uniforms: {
         uTime: { value: 0 },
         uAudioLevel: { value: 0 },
-        uDistortion: { value: 0.35 },
-        uColorA: { value: new THREE.Color("#3d1fa8") }, // deep indigo
-        uColorB: { value: new THREE.Color("#8a1f5a") }, // deep rose
-        uColorC: { value: new THREE.Color("#b06010") }, // deep amber
+        uDistortion: { value: 0.22 },
       },
     });
   }
