@@ -96,19 +96,20 @@ export const fragmentShader = /* glsl */ `
   varying float vDisplacement;
 
   void main() {
-    // Fresnel: 0 at center (facing camera), 1 at rim (glancing angle)
+    // Raw fresnel: 0 at center (faces camera), 1 at rim (glancing angle)
     vec3 viewDir = normalize(cameraPosition - vPosition);
-    float fresnel = 1.0 - max(dot(viewDir, normalize(vNormal)), 0.0);
-    fresnel = pow(fresnel, 2.0);
+    float rawFresnel = 1.0 - max(dot(viewDir, normalize(vNormal)), 0.0);
 
-    // Thin-film phase: position variation + slow time + gentle audio hue shift
-    // Audio moves the color through the palette — NOT brightness
-    float filmPhase = vDisplacement * 3.0 + uTime * 0.04 + uAudioLevel * 0.22;
+    // Softer power — colours appear across the whole hemisphere, not just a thin rim
+    float fresnel = pow(rawFresnel, 1.4);
 
-    // Dark/desaturated brand palette: deep indigo → dark rose → dark amber
-    vec3 c0 = vec3(0.18, 0.10, 0.50);
-    vec3 c1 = vec3(0.46, 0.14, 0.30);
-    vec3 c2 = vec3(0.46, 0.26, 0.06);
+    // Thin-film phase: surface variation + slow drift + gentle audio hue shift
+    float filmPhase = vDisplacement * 2.5 + uTime * 0.05 + uAudioLevel * 0.20;
+
+    // Full brand palette — dark→brand-color mix does the dimming, not pre-darkened values
+    vec3 c0 = vec3(0.48, 0.36, 1.00);  // #7c5cff purple
+    vec3 c1 = vec3(1.00, 0.42, 0.62);  // #ff6b9d pink
+    vec3 c2 = vec3(1.00, 0.71, 0.28);  // #ffb547 amber
 
     float seg = fract(filmPhase) * 3.0;
     vec3 iridescent;
@@ -120,19 +121,22 @@ export const fragmentShader = /* glsl */ `
       iridescent = mix(c2, c0, smoothstep(0.0, 1.0, seg - 2.0));
     }
 
-    // Center stays dark — iridescence lives at the rim only
-    float rim = pow(fresnel, 1.8);
-    vec3 darkBase = vec3(0.04, 0.03, 0.10);
+    // Dark center, iridescent body — rim factor controls the gradient
+    float rim = pow(rawFresnel, 1.5);
+    vec3 darkBase = vec3(0.04, 0.03, 0.12);
     vec3 color = mix(darkBase, iridescent, rim);
 
-    // Audio: gently brightens rim sheen — no luminance pump at center
-    color += iridescent * rim * uAudioLevel * 0.28;
+    // Subtle inner depth: very faint complementary tint at the center
+    color += darkBase * (1.0 - rim) * 0.4;
 
-    // Slow rimlight shimmer
-    color += vec3(sin(uTime * 0.6 + vPosition.y * 3.0) * 0.012) * rim;
+    // Audio: gently brightens rim sheen — no luminance pump at center
+    color += iridescent * rim * uAudioLevel * 0.25;
+
+    // Slow specular shimmer at rim
+    color += vec3(sin(uTime * 0.6 + vPosition.y * 3.0) * 0.018) * rim;
 
     // Hard brightness cap — prevents any blowout regardless of audio
-    color = clamp(color, vec3(0.0), vec3(0.88, 0.72, 0.95));
+    color = clamp(color, vec3(0.0), vec3(0.90, 0.80, 1.00));
 
     gl_FragColor = vec4(color, 1.0);
   }

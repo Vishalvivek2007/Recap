@@ -48,6 +48,28 @@ const features = [
   },
 ];
 
+// Container triggers once when it enters view; children stagger automatically
+const gridVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.05,
+    },
+  },
+};
+
+const EASE = [0.16, 1, 0.3, 1] as [number, number, number, number];
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 24 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.55, ease: EASE },
+  },
+};
+
 export function FeatureBlocks() {
   return (
     <section id="features" className="relative px-6 py-32">
@@ -55,7 +77,7 @@ export function FeatureBlocks() {
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
+          viewport={{ once: true, amount: 0.5 }}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="font-display text-4xl md:text-5xl text-center mb-4"
         >
@@ -65,33 +87,34 @@ export function FeatureBlocks() {
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
+          viewport={{ once: true, amount: 0.5 }}
           transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
           className="text-center text-text-secondary mb-20 max-w-2xl mx-auto"
         >
           A recorder that actually understands what you said.
         </motion.p>
 
-        <div className="grid md:grid-cols-3 gap-4 auto-rows-fr">
-          {features.map((feature, i) => (
+        {/* Single viewport observer on the grid — children stagger via variants */}
+        <motion.div
+          className="grid md:grid-cols-3 gap-4 auto-rows-fr"
+          variants={gridVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
+        >
+          {features.map((feature) => (
             <motion.div
               key={feature.title}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{
-                duration: 0.6,
-                delay: (i % 3) * 0.1,
-                ease: [0.16, 1, 0.3, 1],
-              }}
+              variants={cardVariants}
               data-cursor="hover"
               className={`
                 group relative p-8 rounded-3xl
                 bg-bg-elevated border border-border-subtle
-                hover:border-border-strong transition-all duration-500
+                hover:border-border-strong transition-colors duration-500
                 hover:-translate-y-1 overflow-hidden
                 ${feature.span}
               `}
+              style={{ willChange: "transform" }}
             >
               {/* Hover glow */}
               <div
@@ -123,7 +146,7 @@ export function FeatureBlocks() {
               </div>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );
