@@ -353,10 +353,9 @@ export function ResultClient({ id }: { id: string }) {
     }
   }, []);
 
-  // Word click → seek audio + start playing
+  // Word click → atomic seek + play via ws.play(start)
   const handleWordClick = React.useCallback((start: number) => {
-    playerRef.current?.seekTo(start);
-    playerRef.current?.play();
+    playerRef.current?.play(start);
   }, []);
 
   // ── Render ───────────────────────────────────────────────────────────────

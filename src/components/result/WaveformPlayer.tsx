@@ -8,7 +8,8 @@ import { Play, Pause } from "lucide-react";
 
 export interface WaveformPlayerHandle {
   seekTo: (seconds: number) => void;
-  play: () => void;
+  /** Pass `from` to atomically seek + play; omit to play from current position */
+  play: (from?: number) => void;
 }
 
 // ─── Props ───────────────────────────────────────────────────────────────────
@@ -77,8 +78,14 @@ export const WaveformPlayer = React.forwardRef<
     seekTo(seconds: number) {
       wsRef.current?.setTime(seconds);
     },
-    play() {
-      wsRef.current?.play().catch(() => {});
+    play(from?: number) {
+      const ws = wsRef.current;
+      if (!ws) return;
+      // ws.play(start) is the atomic WaveSurfer v7 seek+play API — it calls
+      // setTime(start) then media.play() in one shot, avoiding the race where
+      // the WebAudio backend's playbackPosition setter and _play() run out of
+      // sync when seekTo + play() are called as two separate operations.
+      (from !== undefined ? ws.play(from) : ws.play())?.catch(() => {});
     },
   }));
 
