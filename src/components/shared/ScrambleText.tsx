@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { motion, useInView } from "framer-motion";
+import { usePathname } from "next/navigation";
 
 const CHARS = "!<>-_\\/[]{}—=+*^?#$%&";
 
@@ -84,7 +85,31 @@ export function ScrambleText({
     }
   }, [mounted, inView, hasRun, autoStart, scramble, delay]);
 
+  // bfcache restore (browser back from a hard navigation): page is thawed frozen,
+  // React doesn't remount, so we reset and re-trigger manually.
+  React.useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      console.log("[ScrambleText] pageshow", { persisted: e.persisted });
+      if (e.persisted) {
+        setDisplay(makeScrambled(text));
+        setHasRun(false);
+      }
+    };
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, [text]);
 
+  // Soft-nav fallback: if this component lives in a persistent layout and survives
+  // a route change, re-trigger when the user navigates back to this page.
+  const pathname = usePathname();
+  const prevPathnameRef = React.useRef(pathname);
+  React.useEffect(() => {
+    if (prevPathnameRef.current !== pathname) {
+      prevPathnameRef.current = pathname;
+      setDisplay(makeScrambled(text));
+      setHasRun(false);
+    }
+  }, [pathname, text]);
 
   return (
     <motion.span
