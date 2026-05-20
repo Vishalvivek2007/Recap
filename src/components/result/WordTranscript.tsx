@@ -4,37 +4,47 @@ import * as React from "react";
 import type { TranscriptWord } from "@/types/meeting";
 
 // ─── Memoised word span ───────────────────────────────────────────────────────
-// Only the two spans that change (old active → new active) re-render on each
-// timeupdate tick. Everything else bails out of the reconciler cheaply.
+// Direct onClick instead of event delegation — unambiguous and no closest() edge
+// cases. The `onClick` prop is the same stable reference for every word (via the
+// ref-callback pattern below), so the custom comparator still bails out on all
+// words except the two that change isActive each tick.
 
 const Word = React.memo(
   function Word({
     text,
     index,
     isActive,
+    onClick,
   }: {
     text: string;
     index: number;
     isActive: boolean;
+    onClick: (idx: number) => void;
   }) {
     return (
       <span
-        data-word-idx={String(index)}
-        data-active={isActive ? "true" : undefined}
+        role="button"
+        tabIndex={-1}
+        onMouseDown={(e) => {
+          // Prevent the default text-selection start so a fast click doesn't
+          // accidentally select the word instead of seeking the audio.
+          e.preventDefault();
+          onClick(index);
+        }}
         className={[
-          "inline rounded-sm px-[2px] py-[1px] cursor-pointer",
+          "inline rounded-sm px-[2px] py-[1px]",
+          "cursor-pointer select-none",
           "transition-colors duration-200",
-          "hover:text-accent",
           isActive
             ? "bg-[hsl(var(--accent)/0.15)] text-accent"
-            : "text-text-primary",
+            : "text-text-primary hover:text-accent",
         ].join(" ")}
       >
         {text}
       </span>
     );
   },
-  // Custom comparator — only re-render when the active state or text changes
+  // Only re-render when active state or text changes; onClick is always the same ref
   (prev, next) => prev.isActive === next.isActive && prev.text === next.text
 );
 
@@ -57,22 +67,22 @@ export function WordTranscript({
 }: WordTranscriptProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  // ── Click via event delegation (single handler, not one per word) ──────────
-  const handleClick = React.useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      const target = (e.target as HTMLElement).closest<HTMLElement>(
-        "[data-word-idx]"
-      );
-      if (!target) return;
-      const idx = Number(target.dataset.wordIdx);
-      if (!Number.isNaN(idx) && words[idx]) {
-        onWordClick(words[idx].start);
-      }
-    },
-    [words, onWordClick]
-  );
+  // Keep a ref to the latest words + callback so the stable handler below
+  // never captures a stale closure.
+  const wordsRef = React.useRef(words);
+  const onWordClickRef = React.useRef(onWordClick);
+  React.useEffect(() => {
+    wordsRef.current = words;
+    onWordClickRef.current = onWordClick;
+  });
 
-  // ── Auto-scroll active word into view (gentle — only if off-screen) ────────
+  // One stable function shared by every Word — no per-word closure churn.
+  const handleWordClick = React.useCallback((idx: number) => {
+    const word = wordsRef.current[idx];
+    if (word) onWordClickRef.current(word.start);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-scroll active word into view (only if off-screen)
   React.useEffect(() => {
     if (activeWordIdx < 0 || !containerRef.current) return;
     const el = containerRef.current.querySelector<HTMLElement>(
@@ -84,14 +94,15 @@ export function WordTranscript({
   if (words.length === 0) return null;
 
   return (
-    <div
-      ref={containerRef}
-      onClick={handleClick}
-      className="text-sm leading-[1.9] select-text"
-    >
+    <div ref={containerRef} className="text-sm leading-[1.9]">
       {words.map((w, i) => (
         <React.Fragment key={i}>
-          <Word text={w.word} index={i} isActive={i === activeWordIdx} />
+          <Word
+            text={w.word}
+            index={i}
+            isActive={i === activeWordIdx}
+            onClick={handleWordClick}
+          />
           {" "}
         </React.Fragment>
       ))}

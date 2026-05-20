@@ -78,7 +78,7 @@ export const WaveformPlayer = React.forwardRef<
       wsRef.current?.setTime(seconds);
     },
     play() {
-      wsRef.current?.play();
+      wsRef.current?.play().catch(() => {});
     },
   }));
 
