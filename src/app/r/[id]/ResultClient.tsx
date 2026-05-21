@@ -364,12 +364,7 @@ export function ResultClient({ id }: { id: string }) {
 
   // Word click → atomic seek + play via ws.play(start)
   const handleWordClick = React.useCallback((start: number) => {
-    console.log("[ResultClient] handleWordClick", { start, playerRefExists: !!playerRef.current });
-    try {
-      playerRef.current?.play(start);
-    } catch (err) {
-      console.error("[ResultClient] handleWordClick threw", err);
-    }
+    playerRef.current?.play(start);
   }, []);
 
   // ── Render ───────────────────────────────────────────────────────────────

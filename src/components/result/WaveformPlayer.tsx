@@ -59,8 +59,6 @@ export const WaveformPlayer = React.forwardRef<
 >(function WaveformPlayer({ audioBlob, onTimeUpdate }, ref) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const wsRef = React.useRef<WaveSurfer | null>(null);
-  // Unique ID so we can tell which instance the ref holds vs which one rendered
-  const wsIdRef = React.useRef<string>("none");
 
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [isReady, setIsReady] = React.useState(false);
@@ -78,30 +76,17 @@ export const WaveformPlayer = React.forwardRef<
   // Expose seekTo / play imperatively
   React.useImperativeHandle(ref, () => ({
     seekTo(seconds: number) {
-      console.log("[WaveformPlayer] seekTo called", { seconds, wsId: wsIdRef.current, wsExists: !!wsRef.current });
       wsRef.current?.setTime(seconds);
     },
     play(from?: number) {
       const ws = wsRef.current;
-      console.log("[WaveformPlayer] play called", {
-        from,
-        wsId: wsIdRef.current,
-        wsExists: !!ws,
-        duration: ws?.getDuration?.(),
-        currentTime: ws?.getCurrentTime?.(),
-      });
-      if (!ws) {
-        console.error("[WaveformPlayer] play: wsRef.current is NULL — handle is stale or WS not initialised");
-        return;
-      }
+      if (!ws) return;
       // ws.play(start) is the atomic WaveSurfer v7 seek+play API — it calls
       // setTime(start) then media.play() in one shot, avoiding the race where
       // the WebAudio backend's playbackPosition setter and _play() run out of
       // sync when seekTo + play() are called as two separate operations.
       const promise = from !== undefined ? ws.play(from) : ws.play();
-      promise
-        ?.then(() => console.log("[WaveformPlayer] play promise resolved ✓"))
-        ?.catch((err: unknown) => console.error("[WaveformPlayer] play promise rejected ✗", err));
+      promise?.catch((err: unknown) => console.error("[WaveformPlayer] play error:", err));
     },
   }));
 
@@ -132,13 +117,9 @@ export const WaveformPlayer = React.forwardRef<
     });
 
     wsRef.current = ws;
-    const wsId = Math.random().toString(36).slice(2, 7);
-    wsIdRef.current = wsId;
     let destroyed = false;
-    console.log("[WaveformPlayer] WaveSurfer created, id=", wsId);
 
     ws.on("ready", (dur) => {
-      console.log("[WaveformPlayer] ready event, id=", wsId, "duration=", dur);
       setDuration(dur);
       setIsReady(true);
     });

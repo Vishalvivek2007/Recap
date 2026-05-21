@@ -93,9 +93,7 @@ export function SpeakerTranscript({
 
   const handleWordClick = React.useCallback((idx: number) => {
     const word = wordsRef.current[idx];
-    console.log("[SpeakerTranscript] handleWordClick", { idx, word, wordsLen: wordsRef.current.length });
     if (word) onWordClickRef.current(word.start);
-    else console.warn("[SpeakerTranscript] handleWordClick: word at idx", idx, "is undefined");
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-scroll active word into view
@@ -131,7 +129,6 @@ export function SpeakerTranscript({
                       data-active={isActive ? "true" : undefined}
                       onMouseDown={(e) => {
                         e.preventDefault();
-                        console.log("[SpeakerTranscript] onMouseDown fired, globalIdx=", globalIdx, "text=", w.word);
                         handleWordClick(globalIdx);
                       }}
                       className={[

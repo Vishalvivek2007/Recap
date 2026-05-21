@@ -30,7 +30,6 @@ const Word = React.memo(
           // Prevent the default text-selection start so a fast click doesn't
           // accidentally select the word instead of seeking the audio.
           e.preventDefault();
-          console.log("[WordTranscript] onMouseDown fired, index=", index, "text=", text);
           onClick(index);
         }}
         className={[
@@ -81,9 +80,7 @@ export function WordTranscript({
   // One stable function shared by every Word — no per-word closure churn.
   const handleWordClick = React.useCallback((idx: number) => {
     const word = wordsRef.current[idx];
-    console.log("[WordTranscript] handleWordClick", { idx, word, wordsLen: wordsRef.current.length });
     if (word) onWordClickRef.current(word.start);
-    else console.warn("[WordTranscript] handleWordClick: word at idx", idx, "is undefined");
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-scroll active word into view (only if off-screen)
